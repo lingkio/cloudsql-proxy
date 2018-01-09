@@ -20,7 +20,7 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/postgres"
+	_ "github.com/lingkio/cloudsql-proxy/proxy/dialers/postgres"
 )
 
 // Example shows how to use cloudsqlpostgres dialer

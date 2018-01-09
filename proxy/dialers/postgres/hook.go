@@ -27,11 +27,13 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/lib/pq"
+	"github.com/lingkio/cloudsql-proxy/proxy/proxy"
 )
 
-func init() {
+var Credential_json = ""
+
+func Init() {
 	sql.Register("cloudsqlpostgres", &drv{})
 }
 
@@ -49,7 +51,7 @@ func (d dialer) Dial(ntw, addr string) (net.Conn, error) {
 		return nil, fmt.Errorf("failed to parse addr: %q. It should conform to the regular expression %q", addr, instanceRegexp)
 	}
 	instance := matches[1]
-	return proxy.Dial(instance)
+	return proxy.Dial(instance, Credential_json)
 }
 
 func (d dialer) DialTimeout(ntw, addr string, timeout time.Duration) (net.Conn, error) {

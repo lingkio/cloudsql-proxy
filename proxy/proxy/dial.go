@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/certs"
+	"github.com/lingkio/cloudsql-proxy/proxy/certs"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 )
@@ -41,12 +41,12 @@ var dialClient struct {
 // This is a network-level function; consider looking in the dialers
 // subdirectory for more convenience functions related to actually logging into
 // your database.
-func Dial(instance string) (net.Conn, error) {
+func Dial(instance string, credential_json string) (net.Conn, error) {
 	dialClient.Lock()
 	c := dialClient.c
 	dialClient.Unlock()
 	if c == nil {
-		if err := InitDefault(context.Background()); err != nil {
+		if err := InitFromJson(context.Background(), credential_json); err != nil {
 			return nil, fmt.Errorf("default proxy initialization failed; consider calling proxy.Init explicitly: %v", err)
 		}
 		// InitDefault initialized the client.
@@ -94,5 +94,16 @@ func InitDefault(ctx context.Context) error {
 		return err
 	}
 	Init(cl, nil, nil)
+	return nil
+}
+
+// InitDefault attempts to initialize the Dial function using credential_json.
+func InitFromJson(ctx context.Context, credential_json string) error {
+	cfg, err := google.JWTConfigFromJSON([]byte(credential_json), "https://www.googleapis.com/auth/sqlservice.admin")
+	if err != nil {
+		return err
+	}
+	client := cfg.Client(ctx)
+	Init(client, nil, nil)
 	return nil
 }
