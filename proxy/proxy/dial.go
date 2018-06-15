@@ -29,7 +29,7 @@ const port = 3307
 
 var dialClient struct {
 	// This client is initialized in Init/InitClient/InitDefault and read in Dial.
-	c *Client
+	c map[string]*Client
 	sync.Mutex
 }
 
@@ -43,7 +43,10 @@ var dialClient struct {
 // your database.
 func Dial(instance string, credential_json string) (net.Conn, error) {
 	dialClient.Lock()
-	c := dialClient.c
+	if dialClient.c == nil {
+		dialClient.c = make(map[string]*Client)
+	}
+	c := dialClient.c[credential_json]
 	dialClient.Unlock()
 	if c == nil {
 		if err := InitFromJson(context.Background(), credential_json); err != nil {
@@ -51,7 +54,7 @@ func Dial(instance string, credential_json string) (net.Conn, error) {
 		}
 		// InitDefault initialized the client.
 		dialClient.Lock()
-		c = dialClient.c
+		c = dialClient.c[credential_json]
 		dialClient.Unlock()
 	}
 
@@ -67,9 +70,12 @@ type Dialer func(net, addr string) (net.Conn, error)
 // The http.Client is used to authenticate API requests.
 // The connset parameter is optional.
 // If the dialer is nil, net.Conn is used.
-func Init(auth *http.Client, connset *ConnSet, dialer Dialer) {
+func Init(auth *http.Client, connset *ConnSet, dialer Dialer, credential_json string) {
 	dialClient.Lock()
-	dialClient.c = &Client{
+	if dialClient.c == nil {
+		dialClient.c = make(map[string]*Client)
+	}
+	dialClient.c[credential_json] = &Client{
 		Port:   port,
 		Certs:  certs.NewCertSource("https://www.googleapis.com/sql/v1beta4/", auth, true),
 		Conns:  connset,
@@ -80,9 +86,9 @@ func Init(auth *http.Client, connset *ConnSet, dialer Dialer) {
 
 // InitClient is similar to Init, but allows you to specify the Client
 // directly.
-func InitClient(c Client) {
+func InitClient(c Client, credential_json string) {
 	dialClient.Lock()
-	dialClient.c = &c
+	dialClient.c[credential_json] = &c
 	dialClient.Unlock()
 }
 
@@ -93,7 +99,7 @@ func InitDefault(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	Init(cl, nil, nil)
+	Init(cl, nil, nil, "")
 	return nil
 }
 
@@ -104,6 +110,6 @@ func InitFromJson(ctx context.Context, credential_json string) error {
 		return err
 	}
 	client := cfg.Client(ctx)
-	Init(client, nil, nil)
+	Init(client, nil, nil, credential_json)
 	return nil
 }
